@@ -1,35 +1,99 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import axios from "axios";
+import SearchBar from "./components/SearchBar/SearchBar";
+import ImageGallery from "./components/ImageGallery/ImageGallery";
+import Loader from "./components/Loader/Loader";
+import ErrorMessage from "./components/ErrorMessage/ErrorMessage";
+import LoadMoreBtn from "./components/LoadMoreBtn/LoadMoreBtn";
+import ImageModal from "./components/ImageModal/ImageModal";
+import { Toaster, toast } from "react-hot-toast";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+const App = () => {
+  const [images, setImages] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [error, setError] = useState(null);
+  const [mainLoading, setMainLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  useEffect(() => {
+    if (searchQuery !== "") {
+      setMainLoading(true);
+      setError(null);
+
+      axios
+        .get(
+          `https://api.unsplash.com/search/photos?page=${currentPage}&query=${searchQuery}&client_id=SoiZFtooMagDSK3ngqbZxxQQTIu--DfyRKElGX6Wzo0`
+        )
+        .then((res) => {
+          setImages((prevImages) => [...prevImages, ...res.data.results]);
+          setTotalPages(res.data.total_pages);
+          if (res.data.results.length === 0) {
+            toast.error("Nothing was found for your request");
+          }
+        })
+        .catch((err) => {
+          setError(err);
+        })
+        .finally(() => {
+          setMainLoading(false);
+          setLoadingMore(false);
+        });
+    }
+  }, [searchQuery, currentPage]);
+
+  const handleSubmit = (searchQuery) => {
+    if (searchQuery.trim() !== "") {
+      setSearchQuery(searchQuery);
+
+      setImages([]);
+      setCurrentPage(1);
+    } else {
+      toast.error("Enter your search term!");
+    }
+  };
+
+  const loadMoreImages = () => {
+    if (currentPage < totalPages) {
+      setLoadingMore(true);
+      setCurrentPage((prevPage) => prevPage + 1);
+    }
+  };
+
+  const openModal = (image) => {
+    setSelectedImage(image);
+    setModalIsOpen(true);
+  };
+
+  const closeModal = () => setModalIsOpen(false);
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div>
+      <SearchBar onSubmit={handleSubmit} />
+      {mainLoading && <Loader />}
+      {images.length > 0 && (
+        <ImageGallery images={images} onImageClick={openModal} />
+      )}
+      {!mainLoading && currentPage < totalPages && (
+        <>
+          <LoadMoreBtn onLoadMore={loadMoreImages} />
+          {loadingMore && <Loader />}
+        </>
+      )}
+      {error && <ErrorMessage error={error} />}
 
-export default App
+      <Toaster position="top-right" reverseOrder={false} />
+      <ImageModal
+        isOpen={modalIsOpen}
+        onCloseModal={closeModal}
+        image={selectedImage}
+      />
+    </div>
+  );
+};
+
+export default App;
