@@ -47,14 +47,10 @@ const App = () => {
   }, [searchQuery, currentPage]);
 
   const handleSubmit = (searchQuery) => {
-    if (searchQuery.trim() !== "") {
-      setSearchQuery(searchQuery);
+    setSearchQuery(searchQuery);
 
-      setImages([]);
-      setCurrentPage(1);
-    } else {
-      toast.error("Enter your search term!");
-    }
+    setImages([]);
+    setCurrentPage(1);
   };
 
   const loadMoreImages = () => {
